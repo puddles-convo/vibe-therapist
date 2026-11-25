@@ -10,3 +10,5 @@ mlruns/
 cache/
 uv.lock
 mlflow.db
+
+website/_site/

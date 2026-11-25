@@ -1,4 +1,4 @@
-# Build spec: Ansh's judge in the graph
+# Build spec: the judge in the graph
 
 Covers item 1 of [docs/plan/prompts/stages-2-3-4.md](../plan/prompts/stages-2-3-4.md): the round's `judge` node runs the judge in `puddles/eval/judge.py` (#33, #38) through an adapter. It replaces lane A of stage 2, which built a second judge.
 
