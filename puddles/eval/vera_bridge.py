@@ -13,6 +13,8 @@ from llm_clients.llm_interface import JudgeLLM, Role
 from utils.conversation_utils import build_langchain_messages
 from vera import main
 
+from puddles.eval.helper import render_helper_system
+
 
 class PuddlesHelperLLM(JudgeLLM):
     """The helper under the policy in PUDDLES_VERA_POLICY, as a VERA provider."""
@@ -31,11 +33,17 @@ class PuddlesHelperLLM(JudgeLLM):
         temperature = os.environ.get("PUDDLES_HELPER_TEMPERATURE", "0").strip()
         self.temperature = None if temperature.lower() == "none" else float(temperature)
         if role == Role.PROVIDER:
-            self.system_prompt = os.environ["PUDDLES_VERA_POLICY"]
+            self.system_prompt = self._policy_prompt()
+
+    @staticmethod
+    def _policy_prompt():
+        return render_helper_system(os.environ["PUDDLES_VERA_POLICY"],
+                                    os.environ.get("PUDDLES_VERA_POLICY_VERSION", "policy"))
 
     def set_system_prompt(self, system_prompt):
-        self.system_prompt = (os.getenv("PUDDLES_VERA_POLICY", system_prompt)
-                              if self.role == Role.PROVIDER else system_prompt)
+        self.system_prompt = (self._policy_prompt()
+                              if self.role == Role.PROVIDER and os.getenv("PUDDLES_VERA_POLICY")
+                              else system_prompt)
 
     def _system_messages(self):
         return [{"role": "system", "content": self.system_prompt}] if self.system_prompt else []

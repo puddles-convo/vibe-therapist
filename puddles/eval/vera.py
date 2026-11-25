@@ -17,8 +17,8 @@ def _required(name: str) -> str:
     return value
 
 
-def run_vera(output: Path, system: str, policy: str, workers: int, limit: int | None,
-             turns: int) -> dict:
+def run_vera(output: Path, system: str, policy: str, policy_version: str,
+             workers: int, limit: int | None, turns: int) -> dict:
     vera_root = Path(os.getenv("PUDDLES_VERA_ROOT", "/opt/vera"))
     user_model = _required("PUDDLES_VERA_USER_MODEL")
     judge_model = _required("PUDDLES_VERA_JUDGE_MODEL")
@@ -40,7 +40,8 @@ def run_vera(output: Path, system: str, policy: str, workers: int, limit: int | 
     if limit is not None:
         command.extend(["--sample", str(limit)])
     repo_root = Path(__file__).resolve().parents[2]
-    env = {**os.environ, "PUDDLES_VERA_POLICY": policy, "MPLBACKEND": "Agg",
+    env = {**os.environ, "PUDDLES_VERA_POLICY": policy,
+           "PUDDLES_VERA_POLICY_VERSION": policy_version, "MPLBACKEND": "Agg",
            "PYTHONPATH": os.pathsep.join((str(vera_root), str(repo_root)))}
     env.pop("VERA_RUN_CONFIG", None)
     generation_dir.mkdir(parents=True, exist_ok=True)

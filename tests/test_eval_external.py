@@ -181,19 +181,19 @@ class _FakeChat:
 def test_helper_messages_and_temperature():
     from schemas import Turn
     client = _FakeChat()
-    helper = OpenAICompatibleHelper("POLICY TEXT", "m-help", temperature=0.0, client=client)
+    helper = OpenAICompatibleHelper("POLICY TEXT", "v-test", "m-help", temperature=0.0, client=client)
     turns = [Turn(speaker="user", text="hi"), Turn(speaker="helper", text="hello"),
              Turn(speaker="user", text="still here")]
     assert helper(turns) == "reply"
     messages = client.kwargs["messages"]
-    assert messages[0] == {"role": "system", "content": "POLICY TEXT"}
+    assert "POLICY TEXT" in messages[0]["content"] and "v-test" in messages[0]["content"]
     assert [m["role"] for m in messages[1:]] == ["user", "assistant", "user"]
     assert client.kwargs["temperature"] == 0.0
     assert client.kwargs["max_tokens"] == 120
     assert client.kwargs["extra_body"] == {"chat_template_kwargs": {"enable_thinking": False}}
 
     client = _FakeChat()
-    OpenAICompatibleHelper("p", "m", temperature=None, client=client)([turns[0]])
+    OpenAICompatibleHelper("p", "v", "m", temperature=None, client=client)([turns[0]])
     assert "temperature" not in client.kwargs
 
 
@@ -203,12 +203,12 @@ def test_helper_from_env(monkeypatch):
         monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     with pytest.raises(ValueError, match="PUDDLES_HELPER_MODEL"):
-        OpenAICompatibleHelper.from_env("p")
+        OpenAICompatibleHelper.from_env("p", "v")
     monkeypatch.setenv("PUDDLES_HELPER_MODEL", "m")
-    assert OpenAICompatibleHelper.from_env("p").model == "m"
+    assert OpenAICompatibleHelper.from_env("p", "v").model == "m"
     monkeypatch.setenv("PUDDLES_HELPER_BASE_URL", "http://x")
     monkeypatch.setenv("PUDDLES_HELPER_TEMPERATURE", "none")
-    helper = OpenAICompatibleHelper.from_env("p")
+    helper = OpenAICompatibleHelper.from_env("p", "v")
     assert helper.temperature is None
 
 
@@ -223,10 +223,10 @@ def test_vera_missing_env(monkeypatch, tmp_path):
     monkeypatch.delenv("PUDDLES_VERA_USER_MODEL", raising=False)
     monkeypatch.delenv("PUDDLES_VERA_JUDGE_MODEL", raising=False)
     with pytest.raises(ValueError, match="PUDDLES_VERA_USER_MODEL"):
-        run_vera(tmp_path, "sys", "policy", 1, None, 30)
+        run_vera(tmp_path, "sys", "policy", "v1", 1, None, 30)
     monkeypatch.setenv("PUDDLES_VERA_USER_MODEL", "m-user")
     with pytest.raises(ValueError, match="PUDDLES_VERA_JUDGE_MODEL"):
-        run_vera(tmp_path, "sys", "policy", 1, None, 30)
+        run_vera(tmp_path, "sys", "policy", "v1", 1, None, 30)
 
 
 def test_vera_invocation_and_score(monkeypatch, tmp_path):
@@ -239,6 +239,7 @@ def test_vera_invocation_and_score(monkeypatch, tmp_path):
         assert config["judging"]["models"] == [{"name": "m-judge", "repeats": 1}]
         assert config["scoring"] == {"personas": "data/SI/personas.tsv", "skip_risk_analysis": False}
         assert env["PUDDLES_VERA_POLICY"] == "policy"
+        assert env["PUDDLES_VERA_POLICY_VERSION"] == "v1"
         assert command[-2:] == ["--sample", "1"]
         results = Path(config["generation"]["output"]) / "eval" / "scores"
         results.mkdir(parents=True, exist_ok=True)
@@ -248,7 +249,7 @@ def test_vera_invocation_and_score(monkeypatch, tmp_path):
 
     from pathlib import Path
     with patch.object(vera.subprocess, "run", side_effect=simulate):
-        score = run_vera(tmp_path, "plain", "policy", 1, 1, 30)
+        score = run_vera(tmp_path, "plain", "policy", "v1", 1, 1, 30)
     assert score["vera_score"] == 81 and score["n"] == 1
     assert score["benchmark"] == "vera-mh-si" and score["system"] == "plain"
 

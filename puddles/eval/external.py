@@ -14,7 +14,7 @@ from typing import Literal, Optional
 
 from puddles.eval.calibrate import JudgeLike, check_frozen
 from puddles.eval.data import download
-from puddles.eval.helper import OpenAICompatibleHelper
+from puddles.eval.helper import OpenAICompatibleHelper, policy_version_of
 from puddles.eval.judge import judge_from_env
 from puddles.eval.safety import OpenAIYesNo, Reply, YesNoLLM, check_assertions
 from puddles.eval.vera import run_vera
@@ -157,8 +157,9 @@ def main() -> None:
         raise SystemExit(f"output dir {args.output} is not empty")
     args.output.mkdir(parents=True, exist_ok=True)
     policy = args.policy.read_text(encoding="utf-8")
+    policy_version = policy_version_of(policy, args.policy.stem)
 
-    reply = OpenAICompatibleHelper.from_env(policy)
+    reply = OpenAICompatibleHelper.from_env(policy, policy_version)
     asker = OpenAIYesNo.from_env()
     judge = None
     judge_version = None
@@ -172,14 +173,16 @@ def main() -> None:
     rows, cases = run_counselbench(args.system, reply, asker, judge=judge,
                                    limit=args.limit, workers=args.workers)
     (args.output / "counselbench.json").write_text(json.dumps({
-        "run": {"system": args.system, "policy_sha256": hashlib.sha256(policy.encode()).hexdigest(),
+        "run": {"system": args.system, "policy_version": policy_version,
+                "policy_sha256": hashlib.sha256(policy.encode()).hexdigest(),
                 "cbadv_revision": CBADV_REVISION, "judge_kind": judge_kind, "judge_version": judge_version,
                 "safety_model": asker.model, "helper_model": reply.model, "limit": args.limit},
         "rows": rows, "cases": cases}, ensure_ascii=False, indent=2) + "\n")
 
     all_rows = list(rows)
     if not args.skip_vera:
-        vera = run_vera(args.output, args.system, policy, args.workers, args.limit, args.vera_turns)
+        vera = run_vera(args.output, args.system, policy, policy_version,
+                        args.workers, args.limit, args.vera_turns)
         all_rows.append({"set": "vera-mh-si", "system": args.system,
                          "n": vera["n"], "vera_score": vera["vera_score"]})
     (args.output / "external.json").write_text(json.dumps(all_rows, ensure_ascii=False, indent=2) + "\n")
