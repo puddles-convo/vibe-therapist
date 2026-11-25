@@ -60,7 +60,10 @@ def test_the_build_deletes_only_an_earlier_build(tmp_path):
     with pytest.raises(ValueError, match="not an earlier build"):
         build.build(tmp_path)
     assert (tmp_path / "notes.txt").read_text(encoding="utf-8") == "mine"
-    (tmp_path / ".nojekyll").write_text("", encoding="utf-8")
+    (tmp_path / ".nojekyll").write_text("", encoding="utf-8")  # another Pages site is not an earlier build
+    with pytest.raises(ValueError, match="not an earlier build"):
+        build.build(tmp_path)
+    (tmp_path / build.MARKER).write_text("", encoding="utf-8")
     (tmp_path / ".git").mkdir()
     with pytest.raises(ValueError, match="not an earlier build"):
         build.build(tmp_path)

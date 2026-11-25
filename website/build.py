@@ -25,6 +25,7 @@ from website import pages
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "website" / "_site"
 REPO = "https://github.com/puddles-convo/vibe-therapist"
+MARKER = ".vibe-therapist-site"  # written first by every build: only a directory holding it is ever deleted
 PUBLIC = "https://puddles-convo.github.io/vibe-therapist"  # where GitHub Pages serves the site; link previews need it
 PRIVATE = "https://github.com/puddles-convo/puddles-stack"  # a private repository: visitors get a 404, so no link
 # Wording in README.md that is only right on GitHub, and what the site says in its place.
@@ -166,11 +167,12 @@ def contents_box(contents: list[tuple[str, str]]) -> str:
 
 def build(out: Path = OUT) -> Site:
     if out.exists() and any(out.iterdir()):
-        if not (out / ".nojekyll").is_file() or (out / ".git").exists():  # only an earlier build is ever deleted
+        if not (out / MARKER).is_file() or (out / ".git").exists():  # only an earlier build is ever deleted
             raise ValueError(f"{out} is not empty and is not an earlier build of the site; choose another --out")
         shutil.rmtree(out)
     out.mkdir(parents=True, exist_ok=True)
-    (out / ".nojekyll").write_text("", encoding="utf-8")  # first, so a build that fails part-way can be run again
+    (out / MARKER).write_text("Written by python -m website.build, which deletes this directory\n", encoding="utf-8")
+    (out / ".nojekyll").write_text("", encoding="utf-8")
     site = Site(out)
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     for there, here in ON_SITE:
